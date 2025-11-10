@@ -1,0 +1,10 @@
+Department,Status,Name
+Engineering,Active,Alice
+Engineering,Active,Bob
+Engineering,Inactive,Carol
+Sales,Active,David
+Sales,Inactive,Eva
+HR,Active,Frank
+HR,Active,Grace
+Finance,Inactive,Helen
+Finance,Active,Ian

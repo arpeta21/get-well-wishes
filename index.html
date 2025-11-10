@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get Well Soon!</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Arial', sans-serif;
+        }
+        #canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        .container {
+            text-align: center;
+            z-index: 2;
+            position: relative;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+            backdrop-filter: blur(4px);
+        }
+        #startButton {
+            padding: 20px 40px;
+            font-size: 24px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+        #startButton:hover {
+            transform: scale(1.05);
+            background: #43A047;
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+        }
+        .message {
+            font-size: 42px;
+            color: #2196F3;
+            margin-bottom: 30px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 1s ease;
+        }
+        .show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .heart {
+            position: absolute;
+            font-size: 24px;
+            color: #E91E63;
+            animation: float 3s infinite ease-in-out;
+            opacity: 0;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+    </style>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .upload-section {
+            text-align: center;
+            padding: 40px;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .stat-card h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        #dataTable {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        #dataTable th, #dataTable td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        #dataTable th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .error {
+            color: red;
+            margin-top: 10px;
+            display: none;
+        }
+        /* Chart sizing */
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+            align-items: start;
+        }
+        .chart-card {
+            background: #fff;
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        canvas {
+            max-width: 100% !important;
+            height: 300px !important;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="container">
+        <h1 class="message" id="message">Get Well Soon! 🌟</h1>
+        <p class="message" id="subMessage" style="font-size: 24px; color: #666;">Sending healing thoughts your way</p>
+        <button id="startButton">Send Wishes 💝</button>
+    </div>
+    <script>
+        // Canvas setup for floating hearts
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let hearts = [];
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Heart particle class
+        class Heart {
+            constructor() {
+                this.reset();
+            }
+            
+            reset() {
+                this.x = Math.random() * canvas.width;
+                this.y = canvas.height + 20;
+                this.size = Math.random() * 15 + 10;
+                this.speed = Math.random() * 1 + 0.5;
+                this.oscillationSpeed = Math.random() * 0.02;
+                this.oscillationDistance = Math.random() * 30 + 20;
+                this.angle = 0;
+                this.opacity = Math.random() * 0.5 + 0.5;
+            }
+            
+            update() {
+                this.y -= this.speed;
+                this.angle += this.oscillationSpeed;
+                this.x += Math.sin(this.angle) * this.oscillationDistance * 0.05;
+                
+                if (this.y < -50) {
+                    this.reset();
+                }
+            }
+            
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.scale(this.size * 0.1, this.size * 0.1);
+                
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.bezierCurveTo(-5, -5, -10, 0, 0, 10);
+                ctx.bezierCurveTo(10, 0, 5, -5, 0, 0);
+                
+                ctx.fillStyle = `rgba(233, 30, 99, ${this.opacity})`;
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // Create hearts
+        for (let i = 0; i < 30; i++) {
+            hearts.push(new Heart());
+        }
+
+        // Animation loop
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            hearts.forEach(heart => {
+                heart.update();
+                heart.draw();
+            });
+            
+            requestAnimationFrame(animate);
+        }
+
+        // Get Well Soon melody synthesis
+        class GetWellSoonMelody {
+            constructor() {
+                this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                // Gentle, uplifting melody notes
+                this.notes = [
+                    { note: 'E4', duration: 0.5 },
+                    { note: 'G4', duration: 0.5 },
+                    { note: 'C5', duration: 1.0 },
+                    { note: 'B4', duration: 0.5 },
+                    { note: 'A4', duration: 0.5 },
+                    { note: 'G4', duration: 1.0 },
+                    { note: 'E4', duration: 0.5 },
+                    { note: 'G4', duration: 0.5 },
+                    { note: 'A4', duration: 1.0 },
+                    { note: 'G4', duration: 0.5 },
+                    { note: 'F4', duration: 0.5 },
+                    { note: 'E4', duration: 1.0 },
+                    { note: 'G4', duration: 0.5 },
+                    { note: 'C5', duration: 0.5 },
+                    { note: 'B4', duration: 1.0 },
+                    { note: 'A4', duration: 0.5 },
+                    { note: 'G4', duration: 0.5 },
+                    { note: 'C5', duration: 1.5 }
+                ];
+            }
+
+            noteToFrequency(note) {
+                const notes = {'C4': 261.63, 'D4': 293.66, 'E4': 329.63, 'F4': 349.23, 
+                             'G4': 392.00, 'A4': 440.00, 'B4': 493.88, 'C5': 523.25};
+                return notes[note];
+            }
+
+            async play() {
+                let time = this.audioCtx.currentTime;
+                
+                for (const note of this.notes) {
+                    const oscillator = this.audioCtx.createOscillator();
+                    const gainNode = this.audioCtx.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.audioCtx.destination);
+                    
+                    oscillator.type = 'sine';
+                    oscillator.frequency.value = this.noteToFrequency(note.note);
+                    
+                    // Softer, gentler sound
+                    gainNode.gain.setValueAtTime(0.3, time);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, time + note.duration);
+                    
+                    oscillator.start(time);
+                    oscillator.stop(time + note.duration);
+                    
+                    time += note.duration;
+                }
+            }
+        }
+
+        // Start the get well wishes
+        const melody = new GetWellSoonMelody();
+        const startButton = document.getElementById('startButton');
+        const message = document.getElementById('message');
+        const subMessage = document.getElementById('subMessage');
+        
+        startButton.addEventListener('click', () => {
+            animate();
+            melody.play();
+            message.classList.add('show');
+            subMessage.classList.add('show');
+            startButton.style.display = 'none';
+        });
+    </script>
+
+        <div id="dashboard" style="display: none;">
+            <div class="stats-container">
+                <div class="stat-card">
+                    <h3>Total Headcount</h3>
+                    <div id="totalHeadcount" class="stat-value">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Departments</h3>
+                    <div id="departmentCount" class="stat-value">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Active Employees</h3>
+                    <div id="activeCount" class="stat-value">0</div>
+                </div>
+            </div>
+
+            <h2>Detailed Breakdown</h2>
+            <div style="overflow-x: auto;">
+                <table id="dataTable">
+                    <thead>
+                        <tr>
+                            <th>Department</th>
+                            <th>Headcount</th>
+                            <th>Active</th>
+                            <th>Inactive</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+            
+            <!-- Charts -->
+            <div class="charts-container" id="chartsContainer">
+                <div class="chart-card">
+                    <h3>Headcount by Department</h3>
+                    <canvas id="deptPieChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Active vs Inactive (per Department)</h3>
+                    <canvas id="deptBarChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function handleFile(file) {
+            const errorDiv = document.getElementById('error');
+            const dashboard = document.getElementById('dashboard');
+            if (!file) return;
+
+            const ext = (file.name || '').split('.').pop().toLowerCase();
+            const reader = new FileReader();
+
+            // CSV handling
+            if (ext === 'csv') {
+                reader.onload = function(e) {
+                    try {
+                        const csvText = e.target.result;
+                        // Parse CSV as a workbook using SheetJS
+                        const workbook = XLSX.read(csvText, { type: 'string' });
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+
+                        if (jsonData.length === 0) throw new Error('No data found in the CSV file');
+
+                        processData(jsonData);
+                        errorDiv.style.display = 'none';
+                        dashboard.style.display = 'block';
+                    } catch (error) {
+                        errorDiv.textContent = 'Error processing CSV: ' + error.message;
+                        errorDiv.style.display = 'block';
+                        dashboard.style.display = 'none';
+                    }
+                };
+
+                reader.onerror = function() {
+                    errorDiv.textContent = 'Error reading CSV file';
+                    errorDiv.style.display = 'block';
+                    dashboard.style.display = 'none';
+                };
+
+                reader.readAsText(file);
+                return;
+            }
+
+            // Default: assume binary Excel (.xlsx/.xls)
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+
+                    if (jsonData.length === 0) throw new Error('No data found in the Excel file');
+
+                    processData(jsonData);
+                    errorDiv.style.display = 'none';
+                    dashboard.style.display = 'block';
+                } catch (error) {
+                    errorDiv.textContent = 'Error processing file: ' + error.message;
+                    errorDiv.style.display = 'block';
+                    dashboard.style.display = 'none';
+                }
+            };
+
+            reader.onerror = function() {
+                errorDiv.textContent = 'Error reading file';
+                errorDiv.style.display = 'block';
+                dashboard.style.display = 'none';
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        // Chart instances
+        let deptPieChart = null;
+        let deptBarChart = null;
+
+        function processData(data) {
+            // Initialize counters
+            const departments = new Map();
+            let totalActive = 0;
+
+            // Process each row
+            data.forEach(row => {
+                const dept = row.Department || 'Unassigned';
+                const isActive = row.Status?.toLowerCase() === 'active';
+
+                if (!departments.has(dept)) {
+                    departments.set(dept, { total: 0, active: 0, inactive: 0 });
+                }
+
+                const deptStats = departments.get(dept);
+                deptStats.total++;
+                if (isActive) {
+                    deptStats.active++;
+                    totalActive++;
+                } else {
+                    deptStats.inactive++;
+                }
+            });
+
+            // Update dashboard
+            document.getElementById('totalHeadcount').textContent = data.length;
+            document.getElementById('departmentCount').textContent = departments.size;
+            document.getElementById('activeCount').textContent = totalActive;
+
+            // Update table
+            const tableBody = document.getElementById('tableBody');
+            tableBody.innerHTML = '';
+
+            departments.forEach((stats, dept) => {
+                const row = tableBody.insertRow();
+                row.insertCell(0).textContent = dept;
+                row.insertCell(1).textContent = stats.total;
+                row.insertCell(2).textContent = stats.active;
+                row.insertCell(3).textContent = stats.inactive;
+            });
+
+            // Prepare chart data
+            const labels = Array.from(departments.keys());
+            const counts = labels.map(l => departments.get(l).total);
+            const activeCounts = labels.map(l => departments.get(l).active);
+            const inactiveCounts = labels.map(l => departments.get(l).inactive);
+
+            updatePieChart(labels, counts);
+            updateBarChart(labels, activeCounts, inactiveCounts);
+        }
+
+        function updatePieChart(labels, data) {
+            const ctx = document.getElementById('deptPieChart').getContext('2d');
+            if (deptPieChart) {
+                deptPieChart.data.labels = labels;
+                deptPieChart.data.datasets[0].data = data;
+                deptPieChart.update();
+                return;
+            }
+
+            deptPieChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: labels.map((_,i) => `hsl(${(i*45)%360} 70% 50%)`),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        function updateBarChart(labels, activeData, inactiveData) {
+            const ctx = document.getElementById('deptBarChart').getContext('2d');
+            if (deptBarChart) {
+                deptBarChart.data.labels = labels;
+                deptBarChart.data.datasets[0].data = activeData;
+                deptBarChart.data.datasets[1].data = inactiveData;
+                deptBarChart.update();
+                return;
+            }
+
+            deptBarChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Active',
+                            data: activeData,
+                            backgroundColor: 'rgba(54, 162, 235, 0.7)'
+                        },
+                        {
+                            label: 'Inactive',
+                            data: inactiveData,
+                            backgroundColor: 'rgba(255, 99, 132, 0.7)'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { stacked: false },
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
