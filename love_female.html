@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>I Love You — Female Voice</title>
+  <style>
+    :root{--bg:#fff7fb;--card:#fff;--accent:#ff4d7e}
+    html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+    body{background:linear-gradient(180deg,#fff7fb,#ffeef6);display:flex;align-items:center;justify-content:center}
+    .app{width:min(760px,96%);padding:28px;border-radius:18px;background:var(--card);box-shadow:0 12px 40px rgba(18,15,30,0.08);position:relative;overflow:hidden}
+    h1{margin:0 0 6px;font-size:34px;text-align:center;color:var(--accent)}
+    p.lead{text-align:center;margin:0 0 18px;color:#6b6b6b}
+    .controls{display:flex;gap:12px;justify-content:center;align-items:center;margin-bottom:12px}
+    .btn{padding:12px 22px;border-radius:999px;border:none;cursor:pointer;font-size:16px}
+    #femaleBtn{background:linear-gradient(90deg,var(--accent),#ff7fa0);color:white;box-shadow:0 8px 24px rgba(255,77,126,0.16)}
+    #customText{width:60%;padding:10px;border-radius:10px;border:1px solid #eee;font-size:15px}
+    .voiceSelect{padding:10px;border-radius:10px;border:1px solid #eee}
+    .stage{position:relative;height:220px;margin-top:18px}
+    .floating{position:absolute;transform-origin:center center;pointer-events:none}
+    footer{margin-top:14px;text-align:center;color:#9aa7b2;font-size:13px}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <h1>Speak with a Female Voice</h1>
+    <p class="lead">This page uses your browser's SpeechSynthesis and will prefer a female voice if available.</p>
+
+    <div class="controls">
+      <input id="customText" placeholder="Type a message (default: I love you so much)" />
+      <select id="voiceList" class="voiceSelect" aria-label="Voice selection"></select>
+      <button id="femaleBtn" class="btn">Say it — ❤️</button>
+    </div>
+
+    <div class="stage" id="stage"></div>
+    <footer>Tip: pick a voice from the list if the default isn't a female voice on your system.</footer>
+  </main>
+
+  <script>
+    const femaleBtn = document.getElementById('femaleBtn');
+    const voiceList = document.getElementById('voiceList');
+    const customText = document.getElementById('customText');
+    const stage = document.getElementById('stage');
+
+    let voices = [];
+
+    function populateVoices(){
+      voices = window.speechSynthesis.getVoices() || [];
+      voiceList.innerHTML = '';
+      voices.forEach((v,i)=>{
+        const opt = document.createElement('option');
+        opt.value = i; opt.textContent = `${v.name} (${v.lang})` + (v.default? ' — default':'');
+        voiceList.appendChild(opt);
+      });
+
+      // attempt to preselect a female voice
+      const femaleIndex = voices.findIndex(v => /female|zira|samantha|kendra|amy|susan|sylvia|alloy|nora/i.test(v.name));
+      if(femaleIndex >= 0){ voiceList.value = femaleIndex; }
+      else {
+        // fallback: pick an en-US voice if available
+        const enIndex = voices.findIndex(v=>/en-?us/i.test(v.lang));
+        if(enIndex >= 0) voiceList.value = enIndex;
+      }
+    }
+
+    // voices may not be available immediately
+    window.speechSynthesis.onvoiceschanged = populateVoices;
+    // initial populate (may be empty until event fires)
+    populateVoices();
+
+    function speakWithVoice(text){
+      if(!('speechSynthesis' in window)){
+        alert('Speech synthesis not supported in this browser.');
+        return;
+      }
+
+      const utter = new SpeechSynthesisUtterance(text);
+      const idx = parseInt(voiceList.value,10);
+      if(!isNaN(idx) && voices[idx]) utter.voice = voices[idx];
+      // ensure a warm, gentle delivery
+      utter.rate = 0.95; utter.pitch = 1.2; utter.volume = 1;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utter);
+    }
+
+    // small floating heart animation when spoken
+    function emitHeart(){
+      const el = document.createElement('div'); el.className='floating'; el.textContent = '💖';
+      const size = 28 + Math.random()*36; el.style.fontSize = size+'px';
+      const left = 20 + Math.random()*(stage.clientWidth-40);
+      el.style.left = left+'px'; el.style.bottom = '8px'; el.style.opacity = '0';
+      stage.appendChild(el);
+      requestAnimationFrame(()=>{
+        el.style.transition = 'transform 3.8s linear, opacity 2.2s ease-out';
+        el.style.transform = `translateY(-${stage.clientHeight+100}px) rotate(${Math.random()*360}deg)`;
+        el.style.opacity = '1';
+      });
+      setTimeout(()=>{ if(el.parentNode) el.parentNode.removeChild(el); }, 4200);
+    }
+
+    femaleBtn.addEventListener('click', ()=>{
+      const text = customText.value.trim() || 'I love you so much.';
+      // if voices not ready yet, wait briefly
+      if((voices.length === 0) && ('onvoiceschanged' in window)){
+        // try to repopulate and then speak
+        populateVoices();
+        setTimeout(()=>{ speakWithVoice(text); emitHeart(); }, 250);
+      } else { speakWithVoice(text); emitHeart(); }
+    });
+
+    // keyboard support
+    customText.addEventListener('keydown', (e)=>{ if(e.key === 'Enter'){ femaleBtn.click(); } });
+  </script>
+</body>
+</html>

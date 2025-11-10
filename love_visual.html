@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Love Visuals — No Voice</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--accent:#ff2d6d}
+    html,body{height:100%;margin:0;font-family:system-ui,Segoe UI,Roboto,Arial}
+    body{background:linear-gradient(180deg,#071024,#0f1724);display:flex;align-items:center;justify-content:center}
+    .app{width:min(980px,96%);padding:28px;border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01));box-shadow:0 12px 40px rgba(2,6,23,0.6);position:relative;overflow:hidden}
+    h1{margin:0 0 8px;font-size:34px;text-align:center;color:var(--accent)}
+    p.lead{text-align:center;margin:0 0 18px;color:#dfeeff;opacity:0.9}
+    .controls{display:flex;gap:12px;justify-content:center;align-items:center;margin-bottom:12px}
+    button{padding:12px 22px;border-radius:999px;border:none;cursor:pointer;font-size:16px;color:white;background:linear-gradient(90deg,#ff6b9a,#ff2d6d);box-shadow:0 10px 30px rgba(255,45,109,0.18)}
+    .stage{position:relative;height:420px;margin-top:18px;overflow:hidden}
+    .emoji{position:absolute;pointer-events:none;font-size:28px;will-change:transform,opacity}
+    @keyframes rise{0%{transform:translateY(0) scale(0.9);opacity:1}100%{transform:translateY(-140vh) scale(1.12);opacity:0}}
+    .kiss{font-size:34px}
+    .heartsRow{display:flex;gap:6px;justify-content:center;margin-top:12px}
+    .mini{font-size:18px;color:#ffd6e0}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <h1>Love Signs & Kisses</h1>
+    <p class="lead">Visual-only app — no voice. Click to release hearts, kisses and confetti.</p>
+    <div class="controls">
+      <button id="burstBtn">Release Love 💘</button>
+      <div class="mini">Press repeatedly for more</div>
+    </div>
+
+    <div class="stage" id="stage"></div>
+    <div class="heartsRow" id="heartsRow"></div>
+  </main>
+
+  <script>
+    const burstBtn = document.getElementById('burstBtn');
+    const stage = document.getElementById('stage');
+    const heartsRow = document.getElementById('heartsRow');
+
+    // Confetti using small DOM squares
+    function spawnConfetti(count=30){
+      for(let i=0;i<count;i++){
+        const el = document.createElement('div');
+        const size = Math.random()*10+6;
+        el.style.position = 'absolute';
+        el.style.left = (50 + (Math.random()-0.5)*80) + '%';
+        el.style.top = (50 + (Math.random()-0.5)*10) + '%';
+        el.style.width = size+'px'; el.style.height = size+'px';
+        el.style.background = ['#ff4d7e','#ffd166','#8be9a9','#8bd3ff'][Math.floor(Math.random()*4)];
+        el.style.opacity = '0.95'; el.style.borderRadius = '2px'; el.style.zIndex = 8;
+        stage.appendChild(el);
+        const dx = (Math.random()-0.5)*800;
+        const dy = - (Math.random()*900 + 300);
+        const rot = (Math.random()-0.5)*720;
+        el.animate([
+          {transform: 'translate(0,0) rotate(0deg)', opacity:1},
+          {transform: `translate(${dx}px, ${dy}px) rotate(${rot}deg)`, opacity:0}
+        ], {duration: 2200 + Math.random()*1600, easing:'cubic-bezier(.2,.8,.2,1)'});
+        setTimeout(()=>{ try{ el.remove(); }catch{} }, 4000);
+      }
+    }
+
+    // Create an emoji floating up
+    function floatEmoji(ch, xPct, size){
+      const el = document.createElement('div'); el.className='emoji'; el.textContent = ch;
+      el.style.left = (xPct || (20 + Math.random()*60)) + '%';
+      el.style.bottom = '-10px'; el.style.fontSize = (size|| (18 + Math.random()*28)) + 'px';
+      el.style.zIndex = 10; stage.appendChild(el);
+      const duration = 4200 + Math.random()*2400;
+      const drift = (Math.random()-0.5) * 200;
+      const rotate = (Math.random()-0.5) * 720;
+      el.style.transition = `transform ${duration}ms linear, opacity ${Math.max(1400,duration-1200)}ms ease-out`;
+      requestAnimationFrame(()=>{
+        el.style.transform = `translate(${drift}px, -${window.innerHeight + 200}px) rotate(${rotate}deg)`;
+        el.style.opacity = '1';
+      });
+      setTimeout(()=>{ try{ el.remove(); }catch{} }, duration + 200);
+    }
+
+    function burstLove(){
+      // central burst
+      const hotspots = [30,45,60,75,50];
+      // hearts
+      for(let i=0;i<18;i++){
+        floatEmoji(Math.random()<0.6? '❤️' : (Math.random()<0.5? '💋' : '😘'), hotspots[Math.floor(Math.random()*hotspots.length)] + (Math.random()-0.5)*10, 22+Math.random()*46);
+      }
+      // smaller kisses
+      for(let i=0;i<8;i++){ floatEmoji('💋', 20 + Math.random()*60, 18 + Math.random()*10); }
+      spawnConfetti(36);
+      // quick row of tiny hearts as flourish
+      const row = document.createElement('div'); row.style.display='flex'; row.style.gap='6px';
+      for(let i=0;i<6;i++){ const s = document.createElement('div'); s.textContent='💖'; s.style.fontSize = (16+Math.random()*12)+'px'; heartsRow.appendChild(s); setTimeout(()=>{ try{s.remove();}catch{} },1400 + i*80); }
+    }
+
+    burstBtn.addEventListener('click', ()=>{ burstLove(); burstBtn.animate([{transform:'scale(1)'},{transform:'scale(1.06)'},{transform:'scale(1)'}],{duration:220}); });
+
+    // initial gentle pulse
+    window.addEventListener('load', ()=>{ setTimeout(()=>burstLove(), 600); });
+    // keyboard support
+    window.addEventListener('keydown', (e)=>{ if(e.code==='Space' || e.key==='Enter'){ e.preventDefault(); burstBtn.click(); } });
+  </script>
+</body>
+</html>

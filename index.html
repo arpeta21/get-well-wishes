@@ -1,3 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>I Love You — Surprise</title>
+  <style>
+    :root{--bg:#0b1020;--card:rgba(255,255,255,0.06);--accent:#ff385c}
+    html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+    body{background:radial-gradient(circle at 10% 10%, #2b2e4a 0%, #0b1020 45%), linear-gradient(180deg, #0b1020, #071024);color:#fff;display:flex;align-items:center;justify-content:center}
+    .app{width:min(920px,96%);max-width:980px;padding:28px;border-radius:16px;background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));box-shadow:0 10px 40px rgba(2,6,23,0.6);position:relative;overflow:hidden}
+    h1{margin:0 0 10px;font-size:36px;text-align:center;color:var(--accent);text-shadow:0 6px 18px rgba(255,56,92,0.12)}
+    p.lead{text-align:center;margin:0 0 20px;color:#e6f0ff;opacity:0.9}
+    .controls{display:flex;gap:12px;justify-content:center;margin-bottom:8px}
+    button#loveBtn{background:linear-gradient(90deg,var(--accent),#ff6b8a);border:none;padding:14px 26px;border-radius:999px;color:#fff;font-size:18px;cursor:pointer;box-shadow:0 8px 30px rgba(255,56,92,0.18);transition:transform .15s ease}
+    button#loveBtn:active{transform:scale(.98)}
+    .small{background:#fff1;border-radius:999px;padding:8px 12px;font-size:13px;color:#e6f0ff}
+    /* emoji container */
+    .stage{position:absolute;inset:0;pointer-events:none}
+    .emoji{position:absolute;font-size:28px;will-change:transform,opacity}
+    /* floating animation */
+    @keyframes floatUp{0%{transform:translateY(0) scale(1) rotate(0deg);opacity:1}100%{transform:translateY(-120vh) scale(1.15) rotate(360deg);opacity:0}}
+    /* pop */
+    @keyframes popIn{0%{transform:scale(.2);opacity:0}60%{transform:scale(1.06);opacity:1}100%{transform:scale(1)}}
+    .center-message{position:relative;display:flex;flex-direction:column;align-items:center;z-index:4}
+    .subtitle{margin-top:10px;color:#ffdfe6}
+    /* confetti */
+    .confetti{position:absolute;inset:0;pointer-events:none;z-index:3}
+    .badge{position:absolute;right:18px;top:18px;background:var(--card);padding:8px 12px;border-radius:999px;color:#cfeafc;font-size:13px}
+    footer.note{margin-top:14px;text-align:center;color:#b6d1ff;font-size:13px}
+  </style>
+</head>
+<body>
+  <main class="app" role="main">
+    <div class="badge">Click the ❤️</div>
+    <div class="center-message">
+      <h1>I Love You So Much</h1>
+      <p class="lead">Press the button and let the kisses and hearts fly — hear it say it too.</p>
+      <div class="controls">
+        <button id="loveBtn" aria-label="Say I love you">Say it — ❤️😘</button>
+        <div class="small" id="countLabel">x20</div>
+      </div>
+      <footer class="note">Tip: click repeatedly for more love!</footer>
+    </div>
+
+    <!-- floating emojis layer -->
+    <div class="stage" id="stage"></div>
+    <!-- confetti (simple) -->
+    <canvas class="confetti" id="confetti"></canvas>
+  </main>
+
+  <script>
+    // Simple "I love you" web app with speechSynthesis + floating emojis
+    const loveBtn = document.getElementById('loveBtn');
+    const stage = document.getElementById('stage');
+    const countLabel = document.getElementById('countLabel');
+    const confettiCanvas = document.getElementById('confetti');
+    const confettiCtx = confettiCanvas.getContext('2d');
+
+    function resizeCanvas(){ confettiCanvas.width = window.innerWidth; confettiCanvas.height = window.innerHeight }
+    window.addEventListener('resize', resizeCanvas); resizeCanvas();
+
+    // Mini confetti implementation
+    const confettiParticles = [];
+    function spawnConfetti(count=40){
+      for(let i=0;i<count;i++){ confettiParticles.push({x:Math.random()*confettiCanvas.width,y:-10,vy:Math.random()*3+1, size:Math.random()*8+4, color:["#ff3864","#ffd166","#8be9a9","#8bd3ff"][Math.floor(Math.random()*4)], rot:Math.random()*360, vr:Math.random()*6-3}) }
+    }
+    function updateConfetti(){
+      confettiCtx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);
+      for(let i=confettiParticles.length-1;i>=0;i--){
+        const p = confettiParticles[i]; p.y += p.vy; p.x += Math.sin(p.y*0.01)*1.5; p.rot += p.vr;
+        confettiCtx.save(); confettiCtx.translate(p.x,p.y); confettiCtx.rotate(p.rot*Math.PI/180);
+        confettiCtx.fillStyle = p.color; confettiCtx.fillRect(-p.size/2,-p.size/2,p.size,p.size);
+        confettiCtx.restore();
+        if(p.y > confettiCanvas.height + 20) confettiParticles.splice(i,1);
+      }
+      requestAnimationFrame(updateConfetti);
+    }
+    updateConfetti();
+
+    // Create floating emoji
+    function createEmoji(ch, x, y, size){
+      const el = document.createElement('div'); el.className='emoji'; el.textContent = ch;
+      const startX = x !== undefined ? x : (window.innerWidth/2 + (Math.random()-0.5)*200);
+      const startY = y !== undefined ? y : (window.innerHeight/2 + (Math.random()-0.5)*40);
+      el.style.left = startX + 'px'; el.style.top = startY + 'px'; el.style.fontSize = (size|| (18+Math.random()*24)) +'px';
+      el.style.transformOrigin = 'center center'; el.style.opacity = '0';
+
+      // random rotation and delay
+      const delay = Math.random()*120;
+      setTimeout(()=>{
+        el.style.transition = 'transform 6s linear, opacity 4s ease-out';
+        el.style.opacity = '1';
+        const dx = (Math.random()-0.5) * 300;
+        const rotate = (Math.random()*720-360);
+        el.style.transform = `translate(${dx}px, -${window.innerHeight + 200}px) rotate(${rotate}deg)`;
+      }, delay);
+
+      // pop animation when inserted
+      el.style.animation = 'popIn .35s ease';
+      stage.appendChild(el);
+      // remove after animation finishes
+      setTimeout(()=>{ if(el && el.parentNode) el.parentNode.removeChild(el); }, 8000 + Math.random()*2000);
+    }
+
+    // Speech function — says the phrase with warm voice
+    function sayLove(){
+      try{
+        const phrase = 'I love you so much.';
+        if('speechSynthesis' in window){
+          const utter = new SpeechSynthesisUtterance(phrase);
+          utter.lang = 'en-US';
+          utter.rate = 0.95; utter.pitch = 1.05; utter.volume = 1;
+          window.speechSynthesis.cancel(); // stop any previous
+          window.speechSynthesis.speak(utter);
+        } else {
+          // fallback: short audio beep sequences (no audio files used)
+          console.log('speech not supported');
+        }
+      }catch(e){console.error(e)}
+    }
+
+    // main interaction
+    let loveCount = 20; // starting count
+    countLabel.textContent = `x${loveCount}`;
+
+    function burstLove(multiplier = 1){
+      // spawn emojis (kisses and hearts)
+      const total = Math.max(6, Math.floor(loveCount * multiplier));
+      for(let i=0;i<total;i++){
+        const ch = Math.random() < 0.6 ? '❤️' : (Math.random() < 0.5 ? '😘' : '💋');
+        const s = 18 + Math.random()*40;
+        const x = window.innerWidth/2 + (Math.random()-0.5)*240;
+        const y = window.innerHeight/2 + (Math.random()-0.5)*80;
+        createEmoji(ch, x, y, s);
+      }
+      spawnConfetti(12 + Math.floor(total/3));
+    }
+
+    loveBtn.addEventListener('click', ()=>{
+      // increase intensity each click
+      burstLove(1);
+      sayLove();
+      // small pulse
+      loveBtn.animate([{transform:'scale(1)'},{transform:'scale(1.07)'},{transform:'scale(1)'}],{duration:260});
+      loveCount = Math.min(200, loveCount + 10);
+      countLabel.textContent = `x${loveCount}`;
+    });
+
+    // also allow space/enter to trigger
+    window.addEventListener('keydown', (e)=>{ if(e.code==='Space' || e.key==='Enter') { e.preventDefault(); loveBtn.click(); } });
+
+    // initial gentle intro burst after page loads
+    window.addEventListener('load', ()=>{ setTimeout(()=>{ burstLove(0.6); }, 600); });
+  </script>
+</body>
+</html>
 <!DOCTYPE html>
 <html lang="en">
 <head>
